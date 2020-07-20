@@ -175,15 +175,18 @@ rplot.cor_df <- function(rdf,
 
 #' @export
 network_plot.cor_df <- function(rdf,
-                                min_cor = .30,
+                                min_cor = 0.3,
+                                max_cor = 1.0,
                                 legend = TRUE,
                                 colours = c("indianred2", "white", "skyblue1"),
                                 repel = TRUE,
                                 curved = TRUE,
+				title = NULL,
                                 colors) {
 
-  if (min_cor < 0 || min_cor > 1) {
-    stop ("min_cor must be a value ranging from zero to one.")
+  if (min_cor < 0 || min_cor > 1 ||
+      max_cor < 0 || max_cor > 1 || max_cor < min_cor) {
+    stop ("min_cor, max_cor must be a value ranging from zero to one.")
   }
 
   if (!missing(colors))
@@ -202,6 +205,7 @@ network_plot.cor_df <- function(rdf,
   proximity[upper.tri(proximity)] <- NA
   diag(proximity) <- NA
   proximity[proximity < min_cor] <- NA
+  proximity[proximity > max_cor] <- NA
 
   # Produce a data frame of data needed for plotting the paths.
   n_paths <- sum(!is.na(proximity))
@@ -225,17 +229,19 @@ network_plot.cor_df <- function(rdf,
 
   plot_ <- list(
     # For plotting paths
+
     if (curved) geom_curve(data = paths,
                            aes(x = x, y = y, xend = xend, yend = yend,
-                               alpha = proximity, size = proximity,
+                               alpha = proximity,
+			       size = proximity,
                                colour = proximity*sign)),
     if (!curved) geom_segment(data = paths,
                               aes(x = x, y = y, xend = xend, yend = yend,
                                   alpha = proximity, size = proximity,
                                   colour = proximity*sign)),
-    scale_alpha(limits = c(0, 1)),
-    scale_size(limits = c(0, 1)),
-    scale_colour_gradientn(limits = c(-1, 1), colors = colours),
+    scale_alpha(limits = c(0, max_cor)),
+    scale_size(limits = c(0, max_cor)),
+    scale_colour_gradientn(limits = c(min_cor, max_cor), colors = colours),
     # Plot the points
     geom_point(data = points,
                aes(x, y),
@@ -259,7 +265,8 @@ network_plot.cor_df <- function(rdf,
     theme_void(),
     guides(size = "none", alpha = "none"),
     if (legend)  labs(colour = NULL),
-    if (!legend) theme(legend.position = "none")
+    if (!legend) theme(legend.position = "none"),
+    if(!is.null(title)) ggtitle(title)
   )
 
   ggplot() + plot_
